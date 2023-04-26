@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:to_do_list_flutter/logic/models/mysql.dart';
 
 void main() {
   runApp(const MyApp());
@@ -11,7 +12,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'To-Do List',
+      title: 'To-Do App',
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -22,12 +23,26 @@ class MyApp extends StatelessWidget {
         // or simply save your changes to "hot reload" in a Flutter IDE).
         // Notice that the counter didn't reset back to zero; the application
         // is not restarted.
-        primarySwatch: Colors.blue,
+        primarySwatch: myColorSwatch,
       ),
       home: const MyHomePage(),
     );
   }
 }
+
+MaterialColor myColorSwatch = const MaterialColor(0xFF673AB7, <int, Color>{
+  // <--- Définir la couleur principale ici
+  50: Color(0xFFF2E7FE),
+  100: Color(0xFFD7B8FF),
+  200: Color(0xFFC094FF),
+  300: Color(0xFFA370FE),
+  400: Color(0xFF855CFF),
+  500: Color(0xFF673AB7),
+  600: Color(0xFF5F33A6),
+  700: Color(0xFF542E90),
+  800: Color(0xFF4A277A),
+  900: Color(0xFF3B1D5C),
+});
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
@@ -46,12 +61,24 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  TextEditingController _textController = TextEditingController();
-  List<List<dynamic>> _tasks = [];
+  final TextEditingController _textController = TextEditingController();
   bool isChecked = false;
+  var db = Mysql();
+  final List<List<dynamic>> _tasks = [];
+
+  void _getTasks() async {
+    var conn = await db.getConnection();
+    var results = await conn.query('SELECT content,isChecked FROM task');
+    for (var element in results) {
+      _tasks.add([element[0], element[1]]);
+    }
+    print(_tasks);
+    await conn.close();
+  }
 
   @override
   Widget build(BuildContext context) {
+    _getTasks();
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -60,11 +87,11 @@ class _MyHomePageState extends State<MyHomePage> {
             const Padding(
               padding: EdgeInsets.all(20),
               child: Text(
-                'To-Do List',
+                'To-Do App',
                 style: TextStyle(
                   fontSize: 30,
                   fontWeight: FontWeight.bold,
-                  color: Colors.blue,
+                  color: Colors.deepPurpleAccent,
                 ),
               ),
             ),
@@ -72,7 +99,7 @@ class _MyHomePageState extends State<MyHomePage> {
               margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
               alignment: Alignment.center,
               child: SizedBox(
-                width: 450,
+                width: 500,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -80,9 +107,21 @@ class _MyHomePageState extends State<MyHomePage> {
                       child: Padding(
                         padding: const EdgeInsets.only(right: 10),
                         child: TextField(
+                          cursorColor: Colors.deepPurpleAccent,
+                          style: const TextStyle(
+                            color: Colors.deepPurpleAccent,
+                          ),
                           controller: _textController,
                           decoration: const InputDecoration(
-                            labelText: 'Enter your task',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(4),
+                              ),
+                              borderSide: BorderSide(
+                                color: Colors.deepPurpleAccent,
+                              ),
+                            ),
+                            labelText: 'Add your new To-do',
                           ),
                           onSubmitted: (value) {
                             if (value.isNotEmpty) {
@@ -91,12 +130,14 @@ class _MyHomePageState extends State<MyHomePage> {
                               });
                               _textController.clear();
                             }
-                            print(_tasks);
                           },
                         ),
                       ),
                     ),
                     ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepPurpleAccent,
+                      ),
                       onPressed: () {
                         String inputText = _textController.text;
                         if (inputText.isNotEmpty) {
@@ -105,9 +146,20 @@ class _MyHomePageState extends State<MyHomePage> {
                           });
                           _textController.clear();
                         }
-                        print(_tasks);
                       },
-                      child: const Text('+ Add Task'),
+                      child: Container(
+                        alignment: Alignment.center,
+                        width: 25,
+                        height: 50,
+                        child: const Text(
+                          '+',
+                          style: TextStyle(
+                            fontSize: 30,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -126,13 +178,12 @@ class _MyHomePageState extends State<MyHomePage> {
                         child: Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(4),
-                            color: Colors.blue[400],
+                            color: Colors.grey[300],
                             boxShadow: const [
                               BoxShadow(
-                                color: Colors.grey,
-                                blurRadius: 3,
-                                offset: Offset(2, 2),
-                              ),
+                                  color: Colors.grey,
+                                  blurRadius: 3,
+                                  offset: Offset(0, 1)),
                             ],
                           ),
                           width: 500,
@@ -140,7 +191,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           margin: const EdgeInsets.fromLTRB(0, 5, 0, 5),
                           child: Center(
                             child: Padding(
-                              padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
+                              padding: const EdgeInsets.fromLTRB(10, 0, 0, 0),
                               child: Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
@@ -153,7 +204,6 @@ class _MyHomePageState extends State<MyHomePage> {
                                           _tasks[index][1] = newValue;
                                         });
                                       }
-                                      print(_tasks);
                                     },
                                   ),
                                   Text(
@@ -161,20 +211,29 @@ class _MyHomePageState extends State<MyHomePage> {
                                     style: const TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                                      color: Colors.black54,
                                     ),
                                   ),
-                                  IconButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _tasks.removeAt(index);
-                                      });
-                                    },
-                                    icon: const Icon(
-                                      Icons.delete,
-                                      color: Colors.white,
+                                  Container(
+                                    decoration: const BoxDecoration(
+                                      borderRadius: BorderRadius.only(
+                                        topRight: Radius.circular(4.0),
+                                        bottomRight: Radius.circular(4.0),
+                                      ),
+                                      color: Colors.red,
                                     ),
-                                    visualDensity: VisualDensity.compact,
+                                    padding: const EdgeInsets.all(5),
+                                    child: IconButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _tasks.removeAt(index);
+                                        });
+                                      },
+                                      icon: const Icon(
+                                        Icons.delete,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -186,6 +245,21 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                 ),
               ),
+            ),
+            Container(
+              margin: const EdgeInsets.fromLTRB(0, 20, 0, 20),
+              width: 150,
+              height: 43,
+              child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurpleAccent,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _tasks.clear();
+                    });
+                  },
+                  child: const Text('Clear All')),
             ),
           ],
         ),
