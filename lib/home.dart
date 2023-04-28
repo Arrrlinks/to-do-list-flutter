@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutterfire_ui/auth.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -60,22 +61,29 @@ class _MyHomePageState extends State<MyHomePage> {
   final TextEditingController _textController = TextEditingController();
   bool isChecked = false;
   List<List<dynamic>> _tasks = [];
+  String _email = '';
 
   @override
   void initState() {
     super.initState();
+    getUserEmail().then((email) {
+      setState(() {
+        _email = email!;
+      });
+    });
+    checkAndCreateDocument();
     readTasks().then((tasks) {
       setState(() {
         _tasks = tasks;
-        print(_tasks);
       });
     });
   }
 
   Future<List<List<dynamic>>> readTasks() async {
+    final email = await getUserEmail();
     final snapshot = await FirebaseFirestore.instance
         .collection('users')
-        .doc('613FlO4zzFaan0iURRSg')
+        .doc(email)
         .collection('tasks')
         .get();
     return snapshot.docs.map((doc) {
@@ -238,12 +246,13 @@ class _MyHomePageState extends State<MyHomePage> {
                                               value: _tasks[index][2],
                                               onChanged: (bool? newValue) {
                                                 if (newValue != null) {
-                                                  final docTask = FirebaseFirestore
-                                                      .instance
-                                                      .collection('users')
-                                                      .doc('613FlO4zzFaan0iURRSg')
-                                                      .collection('tasks')
-                                                      .doc(_tasks[index][0]);
+                                                  final docTask =
+                                                      FirebaseFirestore.instance
+                                                          .collection('users')
+                                                          .doc(_email)
+                                                          .collection('tasks')
+                                                          .doc(
+                                                              _tasks[index][0]);
                                                   docTask.update({
                                                     'isChecked': newValue,
                                                   });
@@ -274,12 +283,13 @@ class _MyHomePageState extends State<MyHomePage> {
                                               padding: const EdgeInsets.all(5),
                                               child: IconButton(
                                                 onPressed: () {
-                                                  final docTask = FirebaseFirestore
-                                                      .instance
-                                                      .collection('users')
-                                                      .doc('613FlO4zzFaan0iURRSg')
-                                                      .collection('tasks')
-                                                      .doc(_tasks[index][0]);
+                                                  final docTask =
+                                                      FirebaseFirestore.instance
+                                                          .collection('users')
+                                                          .doc(_email)
+                                                          .collection('tasks')
+                                                          .doc(
+                                                              _tasks[index][0]);
                                                   docTask.delete();
                                                   setState(() {
                                                     _tasks.removeAt(index);
@@ -313,7 +323,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             onPressed: () {
                               final docTask = FirebaseFirestore.instance
                                   .collection('users')
-                                  .doc('613FlO4zzFaan0iURRSg')
+                                  .doc(_email)
                                   .collection('tasks');
                               docTask.get().then((snapshot) {
                                 for (DocumentSnapshot ds in snapshot.docs) {
@@ -333,12 +343,26 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  String getMaxId(List<List<dynamic>> tasks) {
+    int max = 0;
+    for (var task in tasks) {
+      if (task[0] is String && RegExp(r'^\d+$').hasMatch(task[0])) {
+        int id = int.parse(task[0]);
+        if (id > max) {
+          max = id;
+        }
+      }
+    }
+    max += 1;
+    return max.toString();
+  }
+
   Future<String> createTask({required String content}) async {
     final docTask = FirebaseFirestore.instance
         .collection('users')
-        .doc('613FlO4zzFaan0iURRSg')
+        .doc(_email)
         .collection('tasks')
-        .doc();
+        .doc(getMaxId(_tasks));
 
     final task = Task(
       id: docTask.id,
@@ -349,6 +373,29 @@ class _MyHomePageState extends State<MyHomePage> {
 
     await docTask.set(json);
     return docTask.id;
+  }
+
+  Future<String?> getUserEmail() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      return user.email;
+    }
+    return null;
+  }
+
+  Future<void> checkAndCreateDocument() async {
+    final email = await getUserEmail();
+    if (email == null || email.isEmpty) {
+      return;
+    }
+    String documentPath = 'users/$email';
+    bool documentExists = await FirebaseFirestore.instance.doc(documentPath).get().then((doc) => doc.exists);
+    if (!documentExists) {
+      await FirebaseFirestore.instance.doc(documentPath).set({
+        'created_at': FieldValue.serverTimestamp(),
+      });
+      await FirebaseFirestore.instance.doc(documentPath).collection('tasks').add({});
+    }
   }
 }
 

@@ -13,6 +13,5 @@ void main() async {
       authDomain: "todo-list-flutter-a0f23.firebaseapp.com",
     ),
   );
-
   runApp(const MyApp());
 }
