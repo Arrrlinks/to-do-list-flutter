@@ -11,6 +11,7 @@ void main() async {
       messagingSenderId: "246506530060",
       projectId: "todo-list-flutter-a0f23",
       authDomain: "todo-list-flutter-a0f23.firebaseapp.com",
+      storageBucket: "todo-list-flutter-a0f23.appspot.com"
     ),
   );
   runApp(const MyApp());
