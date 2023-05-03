@@ -394,7 +394,6 @@ class _MyHomePageState extends State<MyHomePage> {
       await FirebaseFirestore.instance.doc(documentPath).set({
         'created_at': FieldValue.serverTimestamp(),
       });
-      await FirebaseFirestore.instance.doc(documentPath).collection('tasks').add({});
     }
   }
 }
